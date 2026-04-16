@@ -330,20 +330,18 @@
 
 <!-- タブバー -->
 <div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('tab1', this)">① 編立時間</button>
-  <button class="tab-btn" onclick="switchTab('tab2', this)">② 残糸・編立計算</button>
+  <button class="tab-btn active" onclick="switchTab('tab1', this)">① 残糸・編立計算</button>
+  <button class="tab-btn" onclick="switchTab('tab2', this)">② 編立時間</button>
   <button class="tab-btn" onclick="switchTab('tab3', this)">③ ランナー/倍率</button>
   <button class="tab-btn" onclick="switchTab('tab4', this)">④ 生産計画</button>
   <button class="tab-btn" onclick="switchTab('tab5', this)">⑤ 打込み変換表</button>
 </div>
 
 <!-- ======================================================
-     タブ①：編立時間計算（シンプル）
-     公式: 1mコース = 打込み × 39.37
-           編立(分) = 編立長 × コース/m ÷ RPM
+     タブ①：残糸・編立計算（総合）
 ====================================================== -->
-<div id="tab1" class="tab-content active">
-  <h2>① 編立時間計算</h2>
+<div id="tab2" class="tab-content">
+  <h2>② 編立時間計算</h2>
   <div class="card">
     <div class="form-grid">
       <div class="form-group">
@@ -405,10 +403,12 @@
 
 
 <!-- ======================================================
-     タブ②：残糸・編立計算（総合）
+     タブ②：編立時間計算（シンプル）
+     公式: 1mコース = 打込み × 39.37
+           編立(分) = 編立長 × コース/m ÷ RPM
 ====================================================== -->
-<div id="tab2" class="tab-content">
-  <h2>② 残糸・編立計算</h2>
+<div id="tab1" class="tab-content active">
+  <h2>① 残糸・編立計算</h2>
 
   <!-- サブセクションA：残回転数の計算 -->
   <div class="card">
