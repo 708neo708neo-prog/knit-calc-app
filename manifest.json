@@ -1,7 +1,7 @@
 {
-  "name": "編機計算ツール",
-  "short_name": "編機計算",
-  "description": "ニット編機の各種計算ツール（編立時間・残糸・ランナー倍率・生産計画）",
+  "name": "モマサレース編立計算ツール",
+  "short_name": "編立計算",
+  "description": "経編の各種計算をリアルタイムで行います",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d1b2a",
