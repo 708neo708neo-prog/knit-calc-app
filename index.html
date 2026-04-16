@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>編機計算ツール</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #e0e7ff;
+      --accent: #0ea5e9;
+      --success: #059669;
+      --success-light: #d1fae5;
+      --warn: #d97706;
+      --warn-light: #fef3c7;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-sub: #64748b;
+      --result-bg: #eef2ff;
+      --result-border: #c7d2fe;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ===== ヘッダー ===== */
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      padding: 16px 24px;
+      box-shadow: 0 2px 8px rgba(79,70,229,.3);
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: .02em; }
+    header p  { font-size: .8rem; opacity: .85; margin-top: 2px; }
+
+    /* ===== タブ ===== */
+    .tab-bar {
+      display: flex;
+      overflow-x: auto;
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 0 16px;
+      gap: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-bar::-webkit-scrollbar { height: 3px; }
+    .tab-bar::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .tab-btn {
+      flex-shrink: 0;
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: .85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 700;
+    }
+
+    /* ===== コンテンツ ===== */
+    .tab-content { display: none; padding: 24px 20px; max-width: 900px; margin: 0 auto; }
+    .tab-content.active { display: block; }
+
+    h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    h3 {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 12px;
+      padding: 6px 10px;
+      background: var(--primary-light);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ===== カード ===== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    }
+
+    /* ===== フォームグリッド ===== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+    .unit-wrap {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--surface);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .unit-wrap:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+    }
+    .unit-wrap input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 8px 10px;
+      font-size: .95rem;
+      color: var(--text);
+      background: transparent;
+      min-width: 0;
+    }
+    .unit-wrap input::placeholder { color: #cbd5e1; }
+    .unit-label {
+      padding: 0 10px;
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+      font-size: .8rem;
+      color: var(--text-sub);
+      white-space: nowrap;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ===== 結果グリッド ===== */
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .result-item {
+      background: var(--result-bg);
+      border: 1px solid var(--result-border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .result-item .r-label {
+      font-size: .75rem;
+      color: var(--primary-dark);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .result-item .r-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+    .result-item .r-unit {
+      font-size: .75rem;
+      color: var(--primary);
+      margin-left: 3px;
+    }
+    .result-item.highlight {
+      background: #fef9c3;
+      border-color: #fde047;
+    }
+    .result-item.highlight .r-value { color: #92400e; }
+    .result-item.highlight .r-label { color: #78350f; }
+
+    /* ===== ボタン ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-block { width: 100%; justify-content: center; margin-top: 14px; }
+
+    /* ===== チェックボックス ===== */
+    .check-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .check-group input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+    .check-group label { font-size: .85rem; color: var(--text); cursor: pointer; }
+
+    /* ===== 変換表 ===== */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .search-bar input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: .9rem;
+      width: 160px;
+      outline: none;
+    }
+    .search-bar input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+    }
+    .search-result-box {
+      background: var(--success-light);
+      border: 1px solid #6ee7b7;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--success);
+      min-width: 160px;
+    }
+
+    .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    thead { background: var(--primary); color: #fff; }
+    thead th { padding: 10px 14px; text-align: left; font-weight: 600; }
+    tbody tr { border-top: 1px solid var(--border); }
+    tbody tr:hover { background: var(--primary-light); }
+    tbody tr.tr-highlight { background: #fef9c3 !important; }
+    tbody td { padding: 8px 14px; }
+    tbody td:nth-child(even) { color: var(--primary-dark); font-weight: 600; }
+
+    /* ===== 双方向計算カード ===== */
+    .dual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .dual-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ===== divider ===== */
+    .divider {
+      border: none;
+      border-top: 1px dashed var(--border);
+      margin: 18px 0;
+    }
+
+    /* ===== 転記ボタン行 ===== */
+    .transfer-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0 4px;
+      padding: 10px 14px;
+      background: var(--warn-light);
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      font-size: .82rem;
+      color: var(--warn);
+    }
+
+    /* ===== アニメーション ===== */
+    @keyframes popIn {
+      0%   { transform: scale(.95); opacity: .6; }
+      60%  { transform: scale(1.03); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .pop { animation: popIn .25s ease; }
+
+    /* ===== フッター ===== */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: .75rem;
+      color: var(--text-sub);
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+
+    @media (max-width: 480px) {
+      .tab-btn { padding: 10px 12px; font-size: .8rem; }
+      .tab-content { padding: 16px 12px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .result-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🧶 編機計算ツール</h1>
+  <p>丸編み機の各種計算をリアルタイムで行います</p>
+</header>
+
+<!-- タブバー -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('tab1', this)">① 編立時間</button>
+  <button class="tab-btn" onclick="switchTab('tab2', this)">② 残糸・編立計算</button>
+  <button class="tab-btn" onclick="switchTab('tab3', this)">③ ランナー/倍率</button>
+  <button class="tab-btn" onclick="switchTab('tab4', this)">④ 生産計画</button>
+  <button class="tab-btn" onclick="switchTab('tab5', this)">⑤ 打込み変換表</button>
+</div>
+
+<!-- ======================================================
+     タブ①：編立時間計算（シンプル）
+     公式: 1mコース = 打込み × 39.37
+           編立(分) = 編立長 × コース/m ÷ RPM
+====================================================== -->
+<div id="tab1" class="tab-content active">
+  <h2>① 編立時間計算</h2>
+  <div class="card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>打込み</label>
+        <div class="unit-wrap">
+          <input type="number" id="t1_ci" placeholder="例: 35.2" step="0.01" min="0" oninput="calcTab1()">
+          <span class="unit-label">c/i</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>機械回転数</label>
+        <div class="unit-wrap">
+          <input type="number" id="t1_rpm" placeholder="例: 300" step="1" min="0" oninput="calcTab1()">
+          <span class="unit-label">RPM</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>編立長</label>
+        <div class="unit-wrap">
+          <input type="number" id="t1_m" placeholder="例: 65" step="0.1" min="0" oninput="calcTab1()">
+          <span class="unit-label">m</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="r-label">1mあたりコース数</div>
+        <div class="r-value" id="t1_cpm">—</div>
+        <span class="r-unit">コース/m</span>
+      </div>
+      <div class="result-item">
+        <div class="r-label">1mあたり時間</div>
+        <div class="r-value" id="t1_secpm">—</div>
+        <span class="r-unit">秒/m</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立時間（分）</div>
+        <div class="r-value" id="t1_min">—</div>
+        <span class="r-unit">分</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立時間（時間）</div>
+        <div class="r-value" id="t1_hr">—</div>
+        <span class="r-unit">時間</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--bg); border-style:dashed;">
+    <p style="font-size:.8rem; color:var(--text-sub); line-height:1.7;">
+      <strong>計算式：</strong><br>
+      1mあたりコース数 = 打込み(c/i) × 39.37（1m = 39.37インチ）<br>
+      編立時間（分）= 編立長(m) × コース/m ÷ 回転数(RPM)<br>
+      編立時間（時間）= 編立時間（分）÷ 60
+    </p>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     タブ②：残糸・編立計算（総合）
+====================================================== -->
+<div id="tab2" class="tab-content">
+  <h2>② 残糸・編立計算</h2>
+
+  <!-- サブセクションA：残回転数の計算 -->
+  <div class="card">
+    <h3>【A】残回転数の計算（ボビン外周から算出）</h3>
+    <p style="font-size:.8rem; color:var(--text-sub); margin-bottom:14px;">
+      ボビンの現在外周・胴周・満巻外周からトータル回転数のうち「現在何回転使ったか」を算出し、残回転数を求めます。
+    </p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>現在の外周（UA）</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2a_ua" placeholder="例: 380" step="0.1" min="0" oninput="calcTab2A()">
+          <span class="unit-label">mm</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>胴周（UI）</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2a_ui" placeholder="例: 120" step="0.1" min="0" oninput="calcTab2A()">
+          <span class="unit-label">mm</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>満巻時の外周</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2a_full" placeholder="例: 500" step="0.1" min="0" oninput="calcTab2A()">
+          <span class="unit-label">mm</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>トータル回転数（Z）</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2a_z" placeholder="例: 50000" step="1" min="0" oninput="calcTab2A()">
+          <span class="unit-label">回転</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="r-label">現在の回転数（使用済み）</div>
+        <div class="r-value" id="t2a_cur">—</div>
+        <span class="r-unit">回転</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">残回転数</div>
+        <div class="r-value" id="t2a_rem">—</div>
+        <span class="r-unit">回転</span>
+      </div>
+    </div>
+
+    <div class="transfer-row">
+      <span>⬇ 上の残回転数を【B】へ転記する</span>
+      <button class="btn btn-secondary" onclick="transferZ()">転記する</button>
+    </div>
+  </div>
+
+  <!-- サブセクションB：残糸・編立量の計算 -->
+  <div class="card">
+    <h3>【B】残糸長・編立量の計算</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>残回転数（Z）</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2b_z" placeholder="例: 25000" step="1" min="0" oninput="calcTab2B()">
+          <span class="unit-label">回転</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ランナー（FZ）</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2b_runner" placeholder="例: 8.5" step="0.01" min="0" oninput="calcTab2B()">
+          <span class="unit-label">mm/r</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>打込み</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2b_ci" placeholder="例: 35.2" step="0.01" min="0" oninput="calcTab2B()">
+          <span class="unit-label">c/i</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>1反当たりｍ数</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2b_mtan" placeholder="例: 65" step="0.1" min="0" oninput="calcTab2B()">
+          <span class="unit-label">m</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>機械回転数</label>
+        <div class="unit-wrap">
+          <input type="number" id="t2b_rpm" placeholder="例: 300" step="1" min="0" oninput="calcTab2B()">
+          <span class="unit-label">RPM</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="r-label">倍率</div>
+        <div class="r-value" id="t2b_bai">—</div>
+        <span class="r-unit">倍</span>
+      </div>
+      <div class="result-item">
+        <div class="r-label">残り糸長</div>
+        <div class="r-value" id="t2b_yarn">—</div>
+        <span class="r-unit">m</span>
+      </div>
+      <div class="result-item">
+        <div class="r-label">残編立長</div>
+        <div class="r-value" id="t2b_fabric">—</div>
+        <span class="r-unit">m</span>
+      </div>
+      <div class="result-item">
+        <div class="r-label">編立可能反数</div>
+        <div class="r-value" id="t2b_tan">—</div>
+        <span class="r-unit">反</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立時間（分）</div>
+        <div class="r-value" id="t2b_min">—</div>
+        <span class="r-unit">分</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立時間（時間）</div>
+        <div class="r-value" id="t2b_hr">—</div>
+        <span class="r-unit">時間</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立日数</div>
+        <div class="r-value" id="t2b_day">—</div>
+        <span class="r-unit">日</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--bg); border-style:dashed;">
+    <p style="font-size:.8rem; color:var(--text-sub); line-height:1.8;">
+      <strong>計算式：</strong><br>
+      現在の回転数 = Z_total × (UA² − UI²) ÷ (満巻UA² − UI²)<br>
+      残回転数 = Z_total − 現在の回転数<br>
+      倍率 = ランナー(mm/r) × 打込み(c/i) × 39.37 ÷ 1000<br>
+      残り糸長(m) = 残回転数 × ランナー ÷ 1000<br>
+      残編立長(m) = 残り糸長 ÷ 倍率　＝　残回転数 ÷ (打込み × 39.37)<br>
+      編立可能反数 = 残編立長 ÷ 1反当たりm数<br>
+      編立時間(分) = 残編立長 × 打込み × 39.37 ÷ RPM<br>
+      編立日数 = 編立時間(時間) ÷ 24
+    </p>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     タブ③：ランナー/倍率 双方向計算
+     倍率 = ランナー × 打込み × 39.37 ÷ 1000
+     ランナー = 倍率 × 25.4 ÷ 打込み
+====================================================== -->
+<div id="tab3" class="tab-content">
+  <h2>③ ランナー / 倍率 計算</h2>
+
+  <div class="dual-grid">
+    <!-- 倍率を求める -->
+    <div class="card">
+      <h3 style="margin-top:0;">倍率を求める</h3>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>打込み</label>
+        <div class="unit-wrap">
+          <input type="number" id="t3a_ci" placeholder="例: 35.2" step="0.01" min="0" oninput="calcTab3A()">
+          <span class="unit-label">c/i</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>ランナー（FZ）</label>
+        <div class="unit-wrap">
+          <input type="number" id="t3a_runner" placeholder="例: 8.5" step="0.01" min="0" oninput="calcTab3A()">
+          <span class="unit-label">mm/r</span>
+        </div>
+      </div>
+      <div class="result-item highlight" style="margin-top:14px;">
+        <div class="r-label">倍率</div>
+        <div class="r-value" id="t3a_bai">—</div>
+        <span class="r-unit">倍</span>
+      </div>
+    </div>
+
+    <!-- ランナーを求める -->
+    <div class="card">
+      <h3 style="margin-top:0;">ランナーを求める（倍率から）</h3>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>打込み</label>
+        <div class="unit-wrap">
+          <input type="number" id="t3b_ci" placeholder="例: 35.2" step="0.01" min="0" oninput="calcTab3B()">
+          <span class="unit-label">c/i</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>求めたい倍率</label>
+        <div class="unit-wrap">
+          <input type="number" id="t3b_bai" placeholder="例: 11.0" step="0.01" min="0" oninput="calcTab3B()">
+          <span class="unit-label">倍</span>
+        </div>
+      </div>
+      <div class="result-item highlight" style="margin-top:14px;">
+        <div class="r-label">ランナー（FZ）</div>
+        <div class="r-value" id="t3b_runner">—</div>
+        <span class="r-unit">mm/R</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--bg); border-style:dashed;">
+    <p style="font-size:.8rem; color:var(--text-sub); line-height:1.8;">
+      <strong>計算式：</strong><br>
+      倍率 = ランナー(mm/r) × 打込み(c/i) × 39.37 ÷ 1000<br>
+      ランナー = 倍率 × 25.4 ÷ 打込み　（= 倍率 × 1000 ÷ (打込み × 39.37)）<br>
+      ※ 倍率とは「糸長(m) ÷ 布長(m)」の比率です
+    </p>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     タブ④：生産計画
+     編立時間(hr) = 予定反数 × m/反 × 打込み × 39.37 ÷ RPM ÷ 60
+     編立日数 = 編立時間 ÷ 24（×1.1 で反降ろし込み）
+====================================================== -->
+<div id="tab4" class="tab-content">
+  <h2>④ 生産計画</h2>
+  <div class="card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>打込み</label>
+        <div class="unit-wrap">
+          <input type="number" id="t4_ci" placeholder="例: 35.2" step="0.01" min="0" oninput="calcTab4()">
+          <span class="unit-label">c/i</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>機械回転数</label>
+        <div class="unit-wrap">
+          <input type="number" id="t4_rpm" placeholder="例: 300" step="1" min="0" oninput="calcTab4()">
+          <span class="unit-label">RPM</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>1反のｍ数</label>
+        <div class="unit-wrap">
+          <input type="number" id="t4_mtan" placeholder="例: 65" step="0.1" min="0" oninput="calcTab4()">
+          <span class="unit-label">m/反</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>予定反数</label>
+        <div class="unit-wrap">
+          <input type="number" id="t4_tan" placeholder="例: 13" step="1" min="0" oninput="calcTab4()">
+          <span class="unit-label">反</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="check-group">
+      <input type="checkbox" id="t4_chk" onchange="calcTab4()">
+      <label for="t4_chk">反降ろし時間を10%追加する</label>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="r-label">1mあたりコース数</div>
+        <div class="r-value" id="t4_cpm">—</div>
+        <span class="r-unit">コース/m</span>
+      </div>
+      <div class="result-item">
+        <div class="r-label">1mあたり時間</div>
+        <div class="r-value" id="t4_secm">—</div>
+        <span class="r-unit">秒/m</span>
+      </div>
+      <div class="result-item">
+        <div class="r-label">合計編立長</div>
+        <div class="r-value" id="t4_total_m">—</div>
+        <span class="r-unit">m</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立時間（時間）</div>
+        <div class="r-value" id="t4_hr">—</div>
+        <span class="r-unit">時間</span>
+      </div>
+      <div class="result-item highlight">
+        <div class="r-label">編立日数</div>
+        <div class="r-value" id="t4_day">—</div>
+        <span class="r-unit">日</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--bg); border-style:dashed;">
+    <p style="font-size:.8rem; color:var(--text-sub); line-height:1.8;">
+      <strong>計算式：</strong><br>
+      合計編立長(m) = 予定反数 × 1反のm数<br>
+      編立時間(hr) = 合計m × 打込み × 39.37 ÷ RPM ÷ 60<br>
+      編立日数 = 編立時間(hr) ÷ 24<br>
+      ※ 反降ろし10%追加時：編立日数 × 1.1
+    </p>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     タブ⑤：打込み変換表
+     公式: c/m = c/i × 39.37
+====================================================== -->
+<div id="tab5" class="tab-content">
+  <h2>⑤ 打込み変換表（c/i ↔ c/m）</h2>
+  <div class="card">
+    <div class="search-bar">
+      <div class="unit-wrap" style="width:160px;">
+        <input type="number" id="t5_ci" placeholder="例: 35.2" step="0.01" min="0" oninput="calcTab5()">
+        <span class="unit-label">c/i</span>
+      </div>
+      <span style="font-size:.85rem; color:var(--text-sub);">→</span>
+      <div class="search-result-box" id="t5_result">— c/m</div>
+    </div>
+    <p style="font-size:.78rem; color:var(--text-sub); margin-bottom:12px;">
+      入力値に最も近い行をハイライト表示します。行クリックでc/i値を入力欄に転記します。
+    </p>
+
+    <div class="table-wrap">
+      <table id="conv-table">
+        <thead>
+          <tr><th>打込み (c/i)</th><th>c/m</th><th>打込み (c/i)</th><th>c/m</th></tr>
+        </thead>
+        <tbody id="conv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer>編機計算ツール — スプレッドシート (ID: 1VNdYAyllTeXR4NeuslexVS-yz5gzcI1I8V_4uXMheNQ) を元に作成</footer>
+
+<script>
+/* =====================================================
+   ユーティリティ
+===================================================== */
+const v = id => parseFloat(document.getElementById(id).value);
+const s = (id, val) => {
+  const el = document.getElementById(id);
+  const txt = typeof val === 'number' ? fmt(val) : val;
+  if (el.textContent !== txt) {
+    el.textContent = txt;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  }
+};
+const fmt = n => {
+  if (!isFinite(n) || isNaN(n)) return '—';
+  if (n === 0) return '0';
+  if (Math.abs(n) >= 1000) return n.toLocaleString('ja-JP', { maximumFractionDigits: 1 });
+  if (Math.abs(n) >= 10)   return n.toFixed(2);
+  return n.toFixed(3);
+};
+const ok = (...ids) => ids.every(id => {
+  const val = v(id);
+  return !isNaN(val) && val > 0;
+});
+
+/* =====================================================
+   タブ切り替え
+===================================================== */
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* =====================================================
+   タブ①：編立時間計算
+   コース/m = 打込み × 39.37
+   編立(分) = 編立長 × コース/m ÷ RPM
+===================================================== */
+function calcTab1() {
+  if (!ok('t1_ci', 't1_rpm', 't1_m')) {
+    ['t1_cpm','t1_secpm','t1_min','t1_hr'].forEach(id => s(id, '—'));
+    return;
+  }
+  const ci = v('t1_ci'), rpm = v('t1_rpm'), m = v('t1_m');
+  const cpm  = ci * 39.37;                 // コース/m
+  const secm = cpm / rpm * 60;             // 秒/m
+  const min  = m * cpm / rpm;              // 編立時間（分）
+  const hr   = min / 60;                   // 編立時間（時間）
+  s('t1_cpm',   cpm);
+  s('t1_secpm', secm);
+  s('t1_min',   min);
+  s('t1_hr',    hr);
+}
+
+/* =====================================================
+   タブ②A：残回転数計算
+   現在の回転数 = Z × (UA² - UI²) ÷ (満巻UA² - UI²)
+===================================================== */
+function calcTab2A() {
+  if (!ok('t2a_ua','t2a_ui','t2a_full','t2a_z')) {
+    ['t2a_cur','t2a_rem'].forEach(id => s(id, '—'));
+    return;
+  }
+  const ua = v('t2a_ua'), ui = v('t2a_ui');
+  const fullUA = v('t2a_full'), z = v('t2a_z');
+  const denom = fullUA * fullUA - ui * ui;
+  if (denom <= 0) { ['t2a_cur','t2a_rem'].forEach(id => s(id, '—')); return; }
+  const cur = z * (ua * ua - ui * ui) / denom;
+  const rem = z - cur;
+  s('t2a_cur', Math.max(0, cur));
+  s('t2a_rem', Math.max(0, rem));
+}
+
+/* 転記ボタン */
+function transferZ() {
+  const remEl = document.getElementById('t2a_rem');
+  const remVal = remEl.textContent;
+  if (remVal === '—') return;
+  // カンマ除去して数値化
+  const num = parseFloat(remVal.replace(/,/g, ''));
+  if (isNaN(num)) return;
+  document.getElementById('t2b_z').value = Math.round(num);
+  calcTab2B();
+}
+
+/* =====================================================
+   タブ②B：残糸・編立量計算
+   倍率 = ランナー × 打込み × 39.37 ÷ 1000
+   残り糸長 = 残回転数 × ランナー ÷ 1000
+   残編立長 = 残り糸長 ÷ 倍率  (= 残回転数 ÷ (打込み×39.37))
+===================================================== */
+function calcTab2B() {
+  const ids = ['t2b_z','t2b_runner','t2b_ci','t2b_mtan','t2b_rpm'];
+  if (!ok(...ids)) {
+    ['t2b_bai','t2b_yarn','t2b_fabric','t2b_tan','t2b_min','t2b_hr','t2b_day']
+      .forEach(id => s(id, '—'));
+    return;
+  }
+  const z      = v('t2b_z');
+  const runner = v('t2b_runner');
+  const ci     = v('t2b_ci');
+  const mtan   = v('t2b_mtan');
+  const rpm    = v('t2b_rpm');
+
+  const cpm    = ci * 39.37;               // コース/m
+  const bai    = runner * cpm / 1000;      // 倍率
+  const yarn   = z * runner / 1000;        // 残り糸長 (m)
+  const fabric = z / cpm;                  // 残編立長 (m)
+  const tan    = fabric / mtan;            // 編立可能反数
+  const min    = fabric * cpm / rpm;       // 編立時間（分）
+  const hr     = min / 60;                 // 編立時間（時間）
+  const day    = hr / 24;                  // 編立日数
+
+  s('t2b_bai',    bai);
+  s('t2b_yarn',   yarn);
+  s('t2b_fabric', fabric);
+  s('t2b_tan',    tan);
+  s('t2b_min',    min);
+  s('t2b_hr',     hr);
+  s('t2b_day',    day);
+}
+
+/* =====================================================
+   タブ③A：倍率を求める
+   倍率 = ランナー × 打込み × 39.37 ÷ 1000
+===================================================== */
+function calcTab3A() {
+  if (!ok('t3a_ci','t3a_runner')) { s('t3a_bai', '—'); return; }
+  const bai = v('t3a_runner') * v('t3a_ci') * 39.37 / 1000;
+  s('t3a_bai', bai);
+}
+
+/* =====================================================
+   タブ③B：ランナーを求める
+   ランナー = 倍率 × 25.4 ÷ 打込み
+===================================================== */
+function calcTab3B() {
+  if (!ok('t3b_ci','t3b_bai')) { s('t3b_runner', '—'); return; }
+  const runner = v('t3b_bai') * 25.4 / v('t3b_ci');
+  s('t3b_runner', runner);
+}
+
+/* =====================================================
+   タブ④：生産計画
+   編立時間(hr) = 予定反数 × m/反 × 打込み × 39.37 ÷ RPM ÷ 60
+===================================================== */
+function calcTab4() {
+  if (!ok('t4_ci','t4_rpm','t4_mtan','t4_tan')) {
+    ['t4_cpm','t4_secm','t4_total_m','t4_hr','t4_day'].forEach(id => s(id, '—'));
+    return;
+  }
+  const ci    = v('t4_ci');
+  const rpm   = v('t4_rpm');
+  const mtan  = v('t4_mtan');
+  const tan   = v('t4_tan');
+  const plus10 = document.getElementById('t4_chk').checked;
+
+  const cpm     = ci * 39.37;
+  const secm    = cpm / rpm * 60;
+  const totalM  = tan * mtan;
+  const hr      = totalM * cpm / rpm / 60;
+  const day     = (hr / 24) * (plus10 ? 1.1 : 1);
+
+  s('t4_cpm',     cpm);
+  s('t4_secm',    secm);
+  s('t4_total_m', totalM);
+  s('t4_hr',      hr);
+  s('t4_day',     day);
+}
+
+/* =====================================================
+   タブ⑤：打込み変換表
+   公式: c/m = c/i × 39.37
+===================================================== */
+
+// スプレッドシートの参照データ（Sheet2: gid=1133997948）
+const TABLE_DATA = [
+  [8.49,334.25],[8.65,340.55],[8.82,347.24],[8.99,353.94],[9.27,364.96],
+  [9.56,376.38],[9.74,383.46],[9.86,388.19],[9.92,390.55],[10.12,398.43],
+  [10.42,410.24],[10.62,418.11],[10.67,420.08],[10.82,425.98],[11.03,434.25],
+  [11.10,437.01],[11.24,442.52],[11.58,455.91],[11.76,463.00],[11.89,468.11],
+  [12.00,472.44],[12.12,477.17],[12.33,485.43],[12.35,486.22],[12.59,495.67],
+  [12.97,510.63],[13.23,520.87],[13.33,524.80],[13.81,543.70],[14.44,568.50],
+  [14.70,578.74],[14.71,579.13],[14.93,587.80],[15.00,590.55],[15.29,601.97],
+  [15.75,620.08],[16.47,648.43],[16.56,651.97],[16.77,660.24],[16.86,663.78],
+  [16.88,664.57],[17.20,677.17],[17.54,690.55],[18.07,711.42],[18.13,713.78],
+  [18.26,718.90],[18.61,732.68],[18.89,743.70],[18.97,746.85],[19.24,757.48],
+  [19.34,761.42],[19.75,777.56],[19.92,784.25],[19.99,787.01],[20.12,792.13],
+  [20.51,807.48],[20.80,818.90],[20.91,823.23],[21.02,827.56],[21.21,835.04],
+  [21.42,843.31],[21.54,848.03],[21.66,852.76],[21.83,859.45],[22.07,868.90],
+  [22.09,869.69],[22.26,876.38],[22.49,885.43],[22.50,885.83],[22.93,902.76],
+  [23.38,920.47],[23.63,930.31],[23.82,937.80],[23.83,938.19],[24.09,948.43],
+  [24.28,955.91],[24.41,961.02],[24.56,966.93],[24.80,976.38],[25.02,985.04],
+  [25.15,990.16],[25.29,995.67],[25.50,1003.94],[25.65,1009.84],[26.14,1029.13],
+  [26.31,1035.83],[26.40,1039.37],[26.50,1043.31],[26.63,1048.43],[27.00,1062.99],
+  [27.20,1070.87],[27.35,1076.77],[27.73,1091.73],[27.80,1094.49],[27.85,1096.46],
+  [28.27,1112.99],[28.80,1133.86],[29.01,1142.13],[29.11,1146.06],[29.60,1165.35],
+  [29.99,1180.71],[30.58,1203.94],[31.00,1220.47],[31.17,1227.17],[31.19,1227.95],
+  [31.37,1235.04],[31.76,1250.39],[31.94,1257.48],[32.80,1291.34],[33.39,1314.57],
+  [33.80,1330.71],[34.40,1354.33],[35.08,1381.10],[35.22,1386.61],[35.30,1389.76],
+  [35.78,1408.66],[36.00,1417.32],[36.43,1434.25],[36.90,1452.76],[37.60,1480.31],
+  [38.09,1499.61],[38.80,1527.56],[39.20,1543.31],[39.45,1553.15],[39.75,1564.96],
+  [40.50,1594.49],[40.54,1596.06],[41.30,1625.98],[41.77,1644.49],[42.40,1669.29],
+  [42.59,1676.77],[42.66,1679.53],[42.80,1685.04],[43.41,1709.06],[43.83,1725.59],
+  [44.00,1732.28],[44.23,1741.34],[44.70,1759.84],[44.72,1760.63],[45.10,1775.59],
+  [45.41,1787.80],[45.50,1791.34],[46.30,1822.83],[46.79,1842.13],[46.90,1846.46],
+  [47.40,1866.14],[47.70,1877.95],[47.80,1881.89],[48.30,1901.57],[48.62,1914.17],
+  [49.31,1941.34],[49.54,1950.39],[50.20,1976.38],[50.46,1986.61],[50.70,1996.06],
+  [51.10,2011.81],[51.70,2035.43],[51.98,2046.46],[52.10,2051.18],[52.40,2062.99],
+  [53.00,2086.61],[53.30,2098.43],[53.32,2099.21],[53.70,2114.17],[54.00,2125.98],
+  [54.02,2126.77],[54.30,2137.80],[55.04,2166.93],[55.10,2169.29],[56.50,2224.41],
+  [56.76,2234.65],[57.20,2251.97],[58.40,2299.21],[58.48,2302.36],[58.70,2311.02],
+  [59.60,2346.46],[59.63,2347.64],[60.78,2392.91],[61.90,2437.01],[61.92,2437.80],
+  [62.30,2452.76],[64.40,2535.43],[65.70,2586.61],[67.40,2653.54],[68.20,2685.04],
+  [68.60,2700.79],[71.70,2822.83],[73.90,2909.45],[75.30,2964.57],[75.70,2980.31],
+  [78.20,3078.74],[81.80,3220.47],[87.10,3429.13],[89.70,3531.50],[91.50,3602.36],
+  [95.00,3740.16]
+];
+
+// テーブル描画（2列ペア）
+(function buildTable() {
+  const tbody = document.getElementById('conv-tbody');
+  const half = Math.ceil(TABLE_DATA.length / 2);
+  for (let i = 0; i < half; i++) {
+    const a = TABLE_DATA[i];
+    const b = TABLE_DATA[i + half];
+    const tr = document.createElement('tr');
+    tr.dataset.idx1 = i;
+    tr.dataset.idx2 = i + half;
+    tr.innerHTML =
+      `<td>${a[0].toFixed(2)}</td><td>${a[1].toFixed(2)}</td>` +
+      (b ? `<td>${b[0].toFixed(2)}</td><td>${b[1].toFixed(2)}</td>` : '<td></td><td></td>');
+    // 行クリックで転記
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', (e) => {
+      const td = e.target;
+      const idx = td.cellIndex < 2 ? i : i + half;
+      if (TABLE_DATA[idx]) {
+        document.getElementById('t5_ci').value = TABLE_DATA[idx][0];
+        calcTab5();
+      }
+    });
+    tbody.appendChild(tr);
+  }
+})();
+
+function calcTab5() {
+  const ciVal = parseFloat(document.getElementById('t5_ci').value);
+  if (isNaN(ciVal) || ciVal <= 0) {
+    document.getElementById('t5_result').textContent = '— c/m';
+    highlightRow(null);
+    return;
+  }
+  // 公式で計算
+  const cm = ciVal * 39.37;
+  document.getElementById('t5_result').textContent = cm.toFixed(2) + ' c/m';
+
+  // 最近傍行のハイライト
+  let minDiff = Infinity, nearIdx = null;
+  TABLE_DATA.forEach((row, i) => {
+    const diff = Math.abs(row[0] - ciVal);
+    if (diff < minDiff) { minDiff = diff; nearIdx = i; }
+  });
+  highlightRow(nearIdx);
+}
+
+function highlightRow(targetIdx) {
+  const half = Math.ceil(TABLE_DATA.length / 2);
+  document.querySelectorAll('#conv-tbody tr').forEach((tr, rowIdx) => {
+    const idx1 = parseInt(tr.dataset.idx1);
+    const idx2 = parseInt(tr.dataset.idx2);
+    if (targetIdx !== null && (idx1 === targetIdx || idx2 === targetIdx)) {
+      tr.classList.add('tr-highlight');
+      tr.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else {
+      tr.classList.remove('tr-highlight');
+    }
+  });
+}
+</script>
+</body>
+</html>
